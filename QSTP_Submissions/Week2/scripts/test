@@ -1,0 +1,81 @@
+#!/usr/bin/env python
+import rospy
+import numpy as np
+from rospy.client import init_node
+from rospy.impl.tcpros import init_tcpros
+from std_msgs.msg import Float32
+from geometry_msgs.msg import Twist
+from week2.srv import angularvelocity
+from nav_msgs.msg import Odometry
+
+
+rospy.init_node('8path_client')
+rospy.wait_for_service('compute_ang_vel')
+
+findang = rospy.ServiceProxy('compute_ang_vel',angularvelocity)
+global init_pt
+init_pt = [0, 0, 0]
+
+#global point
+#point = [0,0,0]
+def initial(msg):
+    """#point = []
+    x = msg.pose.pose.position.x
+    y = msg.pose.pose.position.y
+    z = msg.pose.pose.position.z
+    
+    point.append(x)
+    point.append(y)
+    point.append(z)
+    point[0] = x
+    point[1] = y
+    point[2] = z
+    #print(init_pt)"""
+    global point
+    point = [0,0,0]
+
+    x = msg.pose.pose.position.x
+    y = msg.pose.pose.position.y
+    z = msg.pose.pose.position.z
+
+    point[0] = x
+    point[1] = y
+    point[2] = z
+    #print(point)
+
+
+def callback(msg):
+    radius = msg.data
+    recieved = findang(radius)
+
+    angvel = recieved.ang_vel
+    linvel = 0.1
+
+    pub = rospy.Publisher('/cmd_vel',Twist,queue_size=1)
+    rate = rospy.Rate(1)
+
+    move = Twist()
+    sub = rospy.Subscriber('/odom',Odometry,initial)
+    print(point)
+    
+    while not rospy.is_shutdown:
+        #sub = rospy.Subscriber('/odom',Odometry,initial)
+        #print(point)
+    
+        move.linear.x = linvel
+        move.angular.z = angvel
+        pub.publish(move)
+        rate.sleep()
+       
+
+        """if point == init_pt:
+            move.linear.x = linvel
+            move.angular.z = -1*angvel
+
+            #break
+        pub.publish(move)
+        rate.sleep()"""
+
+sub1 = rospy.Subscriber('/radius',Float32,callback) 
+
+rospy.spin()
